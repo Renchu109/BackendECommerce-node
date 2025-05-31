@@ -1,0 +1,240 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Usuario {
+  id         Int         @id @default(autoincrement())
+  username   String
+  nombre     String
+  apellido   String
+  password   String
+  email      String      @unique
+  dni        String      @unique
+  rol        Rol
+  direcciones Direccion[] @relation("UsuarioDirecciones")
+
+  @@map("usuarios") 
+}
+
+model Direccion {
+  id               Int       @id @default(autoincrement())
+  calle            String
+  numero           Int       
+  deptoNro         Int
+  codigoPostal     Int
+  localidadId      Int
+  localidad        Localidad @relation(fields: [localidadId], references: [id])
+
+  usuarios         Usuario[] @relation("UsuarioDirecciones")
+
+  ordenes          OrdenCompra[]  
+
+  @@map("direcciones")
+}
+
+model Localidad {
+  id          Int         @id @default(autoincrement())
+  nombre      String
+  provinciaId Int
+  provincia   Provincia   @relation(fields: [provinciaId], references: [id])
+  direcciones Direccion[]
+
+  @@map("localidades")
+}
+
+model Provincia {
+  id         Int        @id @default(autoincrement())
+  nombre     String
+  paisId     Int
+  pais       Pais       @relation(fields: [paisId], references: [id])
+  localidades Localidad[]
+
+  @@map("provincias")
+}
+
+model Pais {
+  id         Int         @id @default(autoincrement())
+  nombre     String      
+  provincias Provincia[]
+
+  @@map("paises")
+}
+
+model OrdenCompra {
+  id             Int                  @id @default(autoincrement())
+  total          Float
+  fechaDeCompra  DateTime
+  direccionId    Int
+  direccion      Direccion            @relation(fields: [direccionId], references: [id])
+  detalles       OrdenCompraDetalle[]
+
+  @@map("orden_compra")
+}
+
+model OrdenCompraDetalle {
+  id                Int               @id @default(autoincrement())
+  cantidad          Int
+  subtotal          Float
+  ordenCompraId     Int
+  ordenCompra       OrdenCompra       @relation(fields: [ordenCompraId], references: [id])
+  detalleProductoId Int
+  detalleProducto   DetalleProducto   @relation(fields: [detalleProductoId], references: [id])
+
+  @@map("orden_compra_detalle")
+}
+
+model DetalleProducto {
+  id               Int                   @id @default(autoincrement())
+  estado           Boolean
+  talle            Talle
+  color            Color
+  marca            String
+  stock            Int
+  productoId       Int
+  producto         Producto              @relation(fields: [productoId], references: [id])
+  precioId         Int
+  precio           Precio                @relation(fields: [precioId], references: [id])
+
+  imagenes         Imagen[]              
+
+  ordenes          OrdenCompraDetalle[]
+
+  @@map("detalleProductos")
+}
+
+model Imagen {
+  id               Int               @id @default(autoincrement())
+  url              String
+  detalleProductoId Int               // <== llave foránea
+  detalleProducto   DetalleProducto   @relation(fields: [detalleProductoId], references: [id])
+
+  @@map("imagen")
+}
+
+model Categoria {
+  id               Int         @id @default(autoincrement())
+  nombre           String
+  categoriaPadreId Int?        
+  categoriaPadre   Categoria?  @relation("CategoriaSubcategorias", fields: [categoriaPadreId], references: [id])
+  subcategorias    Categoria[] @relation("CategoriaSubcategorias")
+
+  productoCategorias ProductoCategoria[]
+
+  @@map("categorias")
+}
+
+model Producto {
+  id               Int               @id @default(autoincrement())
+  nombre           String
+  sexo             Sexo
+  tipoProducto     TipoProducto
+
+  productoCategorias ProductoCategoria[]
+
+  detalleProductos DetalleProducto[]
+
+  @@map("productos")
+}
+
+model ProductoCategoria {
+  productoId  Int
+  categoriaId Int
+
+  producto    Producto  @relation(fields: [productoId], references: [id])
+  categoria   Categoria @relation(fields: [categoriaId], references: [id])
+
+  @@id([productoId, categoriaId])
+  @@map("producto_categorias")
+}
+
+model Descuento {
+  id          Int       @id @default(autoincrement())
+  porcentaje  Float?
+  fechaInicio DateTime? @map("fecha_inicio")
+  fechaFinal  DateTime? @map("fecha_final")
+
+  precioDescuentos PrecioDescuento[]
+
+  @@map("descuentos")
+}
+
+model Precio {
+  id               Int                @id @default(autoincrement())
+  precioCompra     Float              @map("precio_compra")
+  precioVenta      Float              @map("precio_venta")
+
+  detalleProductos DetalleProducto[]  
+
+  precioDescuentos PrecioDescuento[]
+
+  @@map("precios")
+}
+
+model PrecioDescuento {
+  descuentoId Int
+  precioId    Int
+
+  descuento   Descuento @relation(fields: [descuentoId], references: [id])
+  precio      Precio    @relation(fields: [precioId], references: [id])
+
+  @@id([descuentoId, precioId])
+  @@map("precioid_descuentoid")
+}
+
+
+
+enum Rol {
+  ADMIN
+  CLIENTE
+}
+
+enum Talle {
+  XS
+  S
+  M
+  L
+  XL
+  XXL
+  talle_37
+  talle_38
+  talle_39
+  talle_40
+  talle_41
+  talle_42
+  talle_43
+  talle_44
+}
+
+enum Color {
+  AMARILLO
+  AZUL
+  BLANCO
+  GRIS
+  MARRON
+  NEGRO
+  ROJO
+  ROSADO
+  VERDE
+}
+
+enum Sexo {
+  HOMBRE
+  MUJER
+  UNISEX
+}
+
+enum TipoProducto {
+  CALZADO
+  INDUMENTARIA
+}
