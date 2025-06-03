@@ -2,10 +2,11 @@ import { Request, Response } from "express";
 import { comparePasswords, hashPassword } from "../services/password.service";
 import prisma from '../models/user';
 import { generateToken } from "../services/auth.service";
+import { Rol } from "@prisma/client";
 
 
 export const register = async (req: Request, res: Response): Promise<void> => {
-    const { email, password, username, nombre, apellido, dni, rol } = req.body
+    const { email, password, username, nombre, apellido, dni } = req.body
 
     try {
 
@@ -45,12 +46,6 @@ export const register = async (req: Request, res: Response): Promise<void> => {
             })
             return
         }
-        if (!rol) {
-            res.status(400).json({
-                message: 'El rol es obligatorio'
-            })
-            return
-        }
         
         const hashedPassword = await hashPassword(password);
         console.log(hashedPassword);
@@ -64,7 +59,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
                     nombre,
                     apellido,
                     dni,
-                    rol
+                    rol: Rol.CLIENTE
                 }
             }
         )

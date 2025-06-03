@@ -1,6 +1,7 @@
+import { createUser, deleteUser, getAllUsers, getUserById, updateUser } from "../controllers/usersControllers";
 import express, { NextFunction, Request, Response } from "express";
 import jwt from 'jsonwebtoken';
-import { createUser, deleteUser, getAllUsers, getUserById, updateUser } from "../controllers/usersControllers";
+import { Rol } from "@prisma/client";
 
 const router = express.Router();
 
@@ -11,9 +12,10 @@ const JWT_SECRET = process.env.JWT_SECRET || 'default-secret'
 const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
     const authHeader = req.headers['authorization']
     const token = authHeader && authHeader.split(' ')[1]
+
     if(!token){
         res.status(401).json({
-            error: "No autorizado"
+            error: "No autorizado, se requiere un Token de acceso"
         })
         return;
     }
@@ -26,9 +28,23 @@ const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
             })
         }
 
+        
+        // Acceso a recursos solo para administradores
+        try {
+        const decoded = jwt.verify(token, JWT_SECRET) as { id: number; email: string, rol: Rol };
+
+        if (decoded.rol !== Rol.ADMIN) {
+            return res.status(403).json({ error: 'Acceso denegado: se requiere rol de administrador' });
+        }
+
+    } catch (err) {
+        return res.status(403).json({ error: 'Token inválido o expirado' });
+    }
+
         next();
     })
 }
+
 
 router.post('/', authenticateToken, createUser);
 router.get('/', authenticateToken, getAllUsers);
