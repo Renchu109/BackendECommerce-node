@@ -46,8 +46,8 @@ const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
 }
 
 router.post('/', authenticateToken, createImage);
-router.get('/', authenticateToken, getAllImages);
-router.get('/:id', authenticateToken, getImageById);
+router.get('/', getAllImages);
+router.get('/:id', getImageById);
 router.put('/:id', authenticateToken, updateImage);
 router.delete('/:id', authenticateToken, deleteImage);
 

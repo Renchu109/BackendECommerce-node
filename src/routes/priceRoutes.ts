@@ -46,8 +46,8 @@ const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
 }
 
 router.post('/', authenticateToken, createPrice);
-router.get('/', authenticateToken, getAllPrices);
-router.get('/:id', authenticateToken, getPriceById);
+router.get('/', getAllPrices);
+router.get('/:id', getPriceById);
 router.put('/:id', authenticateToken, updatePrice);
 router.delete('/:id', authenticateToken, deletePrice);
 

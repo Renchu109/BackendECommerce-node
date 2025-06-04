@@ -46,8 +46,8 @@ const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
 }
 
 router.post('/', authenticateToken, createCountry);
-router.get('/', authenticateToken, getAllCountries);
-router.get('/:id', authenticateToken, getCountryById);
+router.get('/', getAllCountries);
+router.get('/:id', getCountryById);
 router.put('/:id', authenticateToken, updateCountry);
 router.delete('/:id', authenticateToken, deleteCountry);
 

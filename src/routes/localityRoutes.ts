@@ -45,9 +45,9 @@ const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
     })
 }
 
-router.get("/", authenticateToken, getAllLocalities);
-router.get("/:id", authenticateToken, getLocalityById);
 router.post("/", authenticateToken, createLocality);
+router.get("/", getAllLocalities);
+router.get("/:id", getLocalityById);
 router.put("/:id", authenticateToken, updateLocality);
 router.delete("/:id", authenticateToken, deleteLocality);
 

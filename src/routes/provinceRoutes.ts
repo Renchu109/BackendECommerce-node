@@ -46,8 +46,8 @@ const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
 }
 
 router.post('/', authenticateToken, createProvince);
-router.get('/', authenticateToken, getAllProvinces);
-router.get('/:id', authenticateToken, getProvinceById);
+router.get('/', getAllProvinces);
+router.get('/:id', getProvinceById);
 router.put('/:id', authenticateToken, updateProvince);
 router.delete('/:id', authenticateToken, deleteProvince);
 

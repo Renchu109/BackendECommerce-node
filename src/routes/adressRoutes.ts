@@ -46,8 +46,8 @@ const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
 const router = express.Router();
 
 router.post('/', authenticateToken, createAdress);
-router.get('/', authenticateToken, getAllAdresses);
-router.get('/:id', authenticateToken, getAdressById);
+router.get('/', getAllAdresses);
+router.get('/:id', getAdressById);
 router.put('/:id', authenticateToken, updateAdress);
 router.delete('/:id', authenticateToken, deleteAdress);
 

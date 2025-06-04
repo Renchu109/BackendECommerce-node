@@ -46,8 +46,8 @@ const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
 }
 
 router.post('/', authenticateToken, createDiscount);
-router.get('/', authenticateToken, getAllDiscounts);
-router.get('/:id', authenticateToken, getDiscountById);
+router.get('/', getAllDiscounts);
+router.get('/:id', getDiscountById);
 router.put('/:id', authenticateToken, updateDiscount);
 router.delete('/:id', authenticateToken, deleteDiscount);
 

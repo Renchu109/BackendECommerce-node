@@ -46,8 +46,8 @@ const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
 }
 
 router.post('/', authenticateToken, createCategory);
-router.get('/', authenticateToken, getAllCategories);
-router.get('/:id', authenticateToken, getCategoryById);
+router.get('/', getAllCategories);
+router.get('/:id', getCategoryById);
 router.put('/:id', authenticateToken, updateCategory);
 router.delete('/:id', authenticateToken, deleteCategory);
 

@@ -46,8 +46,8 @@ const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
 }
 
 router.post('/', authenticateToken, createProductDetail);
-router.get('/', authenticateToken, getAllProductDetails);
-router.get('/:id', authenticateToken, getProductDetailById);
+router.get('/', getAllProductDetails);
+router.get('/:id', getProductDetailById);
 router.put('/:id', authenticateToken, updateProductDetail);
 router.delete('/:id', authenticateToken, deleteProductDetail);
 
