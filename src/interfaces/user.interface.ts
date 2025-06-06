@@ -9,4 +9,5 @@ export interface IUsuario {
   email: string;
   dni: string;
   rol: Rol;
+  isActive: boolean;
 }

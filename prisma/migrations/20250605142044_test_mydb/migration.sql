@@ -1,9 +1,3 @@
-/*
-  Warnings:
-
-  - You are about to drop the `user` table. If the table is not empty, all the data it contains will be lost.
-
-*/
 -- CreateEnum
 CREATE TYPE "Rol" AS ENUM ('ADMIN', 'CLIENTE');
 
@@ -19,9 +13,6 @@ CREATE TYPE "Sexo" AS ENUM ('HOMBRE', 'MUJER', 'UNISEX');
 -- CreateEnum
 CREATE TYPE "TipoProducto" AS ENUM ('CALZADO', 'INDUMENTARIA');
 
--- DropTable
-DROP TABLE "user";
-
 -- CreateTable
 CREATE TABLE "usuarios" (
     "id" SERIAL NOT NULL,
@@ -32,6 +23,7 @@ CREATE TABLE "usuarios" (
     "email" TEXT NOT NULL,
     "dni" TEXT NOT NULL,
     "rol" "Rol" NOT NULL,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
 
     CONSTRAINT "usuarios_pkey" PRIMARY KEY ("id")
 );
@@ -202,16 +194,16 @@ ALTER TABLE "provincias" ADD CONSTRAINT "provincias_paisId_fkey" FOREIGN KEY ("p
 ALTER TABLE "orden_compra" ADD CONSTRAINT "orden_compra_direccionId_fkey" FOREIGN KEY ("direccionId") REFERENCES "direcciones"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "orden_compra_detalle" ADD CONSTRAINT "orden_compra_detalle_ordenCompraId_fkey" FOREIGN KEY ("ordenCompraId") REFERENCES "orden_compra"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "orden_compra_detalle" ADD CONSTRAINT "orden_compra_detalle_detalleProductoId_fkey" FOREIGN KEY ("detalleProductoId") REFERENCES "detalleProductos"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "detalleProductos" ADD CONSTRAINT "detalleProductos_productoId_fkey" FOREIGN KEY ("productoId") REFERENCES "productos"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "orden_compra_detalle" ADD CONSTRAINT "orden_compra_detalle_ordenCompraId_fkey" FOREIGN KEY ("ordenCompraId") REFERENCES "orden_compra"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "detalleProductos" ADD CONSTRAINT "detalleProductos_precioId_fkey" FOREIGN KEY ("precioId") REFERENCES "precios"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "detalleProductos" ADD CONSTRAINT "detalleProductos_productoId_fkey" FOREIGN KEY ("productoId") REFERENCES "productos"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "imagen" ADD CONSTRAINT "imagen_detalleProductoId_fkey" FOREIGN KEY ("detalleProductoId") REFERENCES "detalleProductos"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -220,10 +212,10 @@ ALTER TABLE "imagen" ADD CONSTRAINT "imagen_detalleProductoId_fkey" FOREIGN KEY 
 ALTER TABLE "categorias" ADD CONSTRAINT "categorias_categoriaPadreId_fkey" FOREIGN KEY ("categoriaPadreId") REFERENCES "categorias"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "producto_categorias" ADD CONSTRAINT "producto_categorias_productoId_fkey" FOREIGN KEY ("productoId") REFERENCES "productos"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "producto_categorias" ADD CONSTRAINT "producto_categorias_categoriaId_fkey" FOREIGN KEY ("categoriaId") REFERENCES "categorias"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "producto_categorias" ADD CONSTRAINT "producto_categorias_categoriaId_fkey" FOREIGN KEY ("categoriaId") REFERENCES "categorias"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "producto_categorias" ADD CONSTRAINT "producto_categorias_productoId_fkey" FOREIGN KEY ("productoId") REFERENCES "productos"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "precioid_descuentoid" ADD CONSTRAINT "precioid_descuentoid_descuentoId_fkey" FOREIGN KEY ("descuentoId") REFERENCES "descuentos"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

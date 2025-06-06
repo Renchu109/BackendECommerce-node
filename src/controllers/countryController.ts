@@ -42,7 +42,11 @@ export const createCountry = async (req: Request, res: Response): Promise<void> 
 // traer todos los paises [GET-ALL]
 export const getAllCountries = async (req: Request, res: Response): Promise<void> => {
     try {
-        const countries = await prisma.findMany();
+        const countries = await prisma.findMany({
+            where: {
+                isActive: true
+            }
+        });
         res.status(200).json(countries);
     } catch (error: any) {
         console.log(error);
@@ -59,7 +63,8 @@ export const getCountryById = async (req: Request, res: Response): Promise<void>
 
         const country = await prisma.findUnique({
             where: {
-                id: countryId
+                id: countryId,
+                isActive: true
             }
         })
 
@@ -86,20 +91,31 @@ export const updateCountry = async (req: Request, res: Response): Promise<void> 
 
     try {
 
+        const country = await prisma.findUnique({
+        where: { id: countryId }
+        });
+
+        if (!country || !country.isActive) {
+            res.status(400).json({
+                message: `El pais ${countryId} fue eliminado o no existe, y no se puede editar.`
+            });
+            return;
+        }
+
         let dataToUpdate: any = { ...req.body }
 
         if (nombre) {
             dataToUpdate.nombre = nombre;
         }
 
-        const country = await prisma.update({
+        const updatedCountry = await prisma.update({
             where: {
                 id: countryId
             },
             data: dataToUpdate
         })
 
-        res.status(200).json(country);
+        res.status(200).json(updatedCountry);
 
     } catch (error: any) {
         if (error?.code === 'P2002' && error?.meta?.target?.includes('nombre')) {
@@ -124,9 +140,12 @@ export const deleteCountry = async (req: Request, res: Response): Promise<void> 
 
     try {
         
-        await prisma.delete({
+        await prisma.update({
             where: {
                 id: countryId
+            },
+            data: {
+                isActive: false
             }
         })
 

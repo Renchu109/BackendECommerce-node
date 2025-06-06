@@ -3,6 +3,7 @@ export interface IDireccion {
   calle: string;
   numero: number;
   deptoNro: number;
+  isActive: boolean;
   codigoPostal: number;
   localidadId: number;
 }

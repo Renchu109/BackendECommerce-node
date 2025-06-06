@@ -44,7 +44,11 @@ export const createPrice = async (req: Request, res: Response): Promise<void> =>
 // traer todos los precios [GET-ALL]
 export const getAllPrices = async (req: Request, res: Response): Promise<void> => {
     try {
-        const prices = await prisma.findMany();
+        const prices = await prisma.findMany({
+            /*where: {
+                isActive: true
+            }*/
+        });
         res.status(200).json(prices);
     } catch (error: any) {
         console.log(error);
@@ -61,7 +65,8 @@ export const getPriceById = async (req: Request, res: Response): Promise<void> =
 
         const price = await prisma.findUnique({
             where: {
-                id: priceId
+                id: priceId,
+                isActive: true
             }
         })
 
@@ -88,6 +93,17 @@ export const updatePrice = async (req: Request, res: Response): Promise<void> =>
 
     try {
 
+        const price = await prisma.findUnique({
+        where: { id: priceId }
+        });
+
+        if (!price || !price.isActive) {
+            res.status(400).json({
+                message: `El precio ${priceId} fue eliminado o no existe, y no se puede editar.`
+            });
+            return;
+        }
+
         let dataToUpdate: any = { ...req.body }
 
         if (precioCompra) {
@@ -98,14 +114,14 @@ export const updatePrice = async (req: Request, res: Response): Promise<void> =>
             dataToUpdate.precioVenta = precioVenta;
         }
 
-        const price = await prisma.update({
+        const updatedPrice = await prisma.update({
             where: {
                 id: priceId
             },
             data: dataToUpdate
         })
 
-        res.status(200).json(price);
+        res.status(200).json(updatedPrice);
 
     } catch (error: any) {
 
@@ -127,9 +143,12 @@ export const deletePrice = async (req: Request, res: Response): Promise<void> =>
 
     try {
         
-        await prisma.delete({
+        await prisma.update({
             where: {
                 id: priceId
+            },
+            data: {
+                isActive: false
             }
         })
 

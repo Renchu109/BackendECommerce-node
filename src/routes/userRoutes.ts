@@ -46,7 +46,7 @@ const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
 }
 
 
-router.post('/', authenticateToken, createUser);
+router.post('/', createUser);
 router.get('/', authenticateToken, getAllUsers);
 router.get('/:id', authenticateToken, getUserById);
 router.put('/:id', authenticateToken, updateUser);

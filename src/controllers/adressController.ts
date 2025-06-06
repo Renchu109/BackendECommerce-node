@@ -64,7 +64,11 @@ export const createAdress = async (req: Request, res: Response): Promise<void> =
 // traer todas las direcciones [GET-ALL]
 export const getAllAdresses = async (req: Request, res: Response): Promise<void> => {
     try {
-        const adresses = await prisma.findMany();
+        const adresses = await prisma.findMany({
+            /*where: {
+                isActive: true
+            }*/
+        });
         res.status(200).json(adresses);
     } catch (error: any) {
         console.log(error);
@@ -81,7 +85,8 @@ export const getAdressById = async (req: Request, res: Response): Promise<void> 
 
         const adress = await prisma.findUnique({
             where: {
-                id: adressId
+                id: adressId,
+                isActive: true
             }
         })
 
@@ -108,6 +113,17 @@ export const updateAdress = async (req: Request, res: Response): Promise<void> =
 
     try {
 
+        const adress = await prisma.findUnique({
+        where: { id: adressId }
+        });
+
+        if (!adress || !adress.isActive) {
+            res.status(400).json({
+                message: `La dirección ${adressId} fue eliminada o no existe, y no se puede editar.`
+            });
+            return;
+        }
+
         let dataToUpdate: any = { ...req.body }
 
         if (calle) {
@@ -127,14 +143,14 @@ export const updateAdress = async (req: Request, res: Response): Promise<void> =
         }
 
 
-        const adress = await prisma.update({
+        const updatedAdress = await prisma.update({
             where: {
                 id: adressId
             },
             data: dataToUpdate
         })
 
-        res.status(200).json(adress);
+        res.status(200).json(updatedAdress);
 
     } catch (error: any) {
         if (error?.code == 'P2025') {
@@ -155,9 +171,12 @@ export const deleteAdress = async (req: Request, res: Response): Promise<void> =
 
     try {
         
-        await prisma.delete({
+        await prisma.update({
             where: {
                 id: adressId
+            },
+            data: {
+                isActive: false
             }
         })
 

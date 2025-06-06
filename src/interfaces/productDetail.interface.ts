@@ -9,4 +9,5 @@ export interface IDetalleProducto {
   stock: number;
   productoId: number;
   precioId: number;
+  isActive: boolean;
 }

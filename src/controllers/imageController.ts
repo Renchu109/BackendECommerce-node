@@ -44,7 +44,11 @@ export const createImage = async (req: Request, res: Response): Promise<void> =>
 // traer todas las imágenes [GET-ALL]
 export const getAllImages = async (req: Request, res: Response): Promise<void> => {
     try {
-        const images = await prisma.findMany();
+        const images = await prisma.findMany({
+            /*where: {
+                isActive: true
+            }*/
+        });
         res.status(200).json(images);
     } catch (error: any) {
         console.log(error);
@@ -61,7 +65,8 @@ export const getImageById = async (req: Request, res: Response): Promise<void> =
 
         const image = await prisma.findUnique({
             where: {
-                id: imageId
+                id: imageId,
+                isActive: true
             }
         })
 
@@ -88,6 +93,17 @@ export const updateImage = async (req: Request, res: Response): Promise<void> =>
 
     try {
 
+        const image = await prisma.findUnique({
+        where: { id: imageId }
+        });
+
+        if (!image || !image.isActive) {
+            res.status(400).json({
+                message: `La imagen ${imageId} fue eliminada o no existe, y no se puede editar.`
+            });
+            return;
+        }
+
         let dataToUpdate: any = { ...req.body }
 
         if (url) {
@@ -98,14 +114,14 @@ export const updateImage = async (req: Request, res: Response): Promise<void> =>
             dataToUpdate.detalleProductoId = detalleProductoId;
         }
 
-        const image = await prisma.update({
+        const updatedImage = await prisma.update({
             where: {
                 id: imageId
             },
             data: dataToUpdate
         })
 
-        res.status(200).json(image);
+        res.status(200).json(updatedImage);
 
     } catch (error: any) {
         if (error?.code == 'P2025') {
@@ -126,9 +142,12 @@ export const deleteImage = async (req: Request, res: Response): Promise<void> =>
 
     try {
         
-        await prisma.delete({
+        await prisma.update({
             where: {
                 id: imageId
+            },
+            data: {
+                isActive: false
             }
         })
 

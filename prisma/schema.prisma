@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -14,31 +8,31 @@ datasource db {
 }
 
 model Usuario {
-  id         Int         @id @default(autoincrement())
-  username   String
-  nombre     String
-  apellido   String
-  password   String
-  email      String      @unique
-  dni        String      @unique
-  rol        Rol
+  id          Int         @id @default(autoincrement())
+  username    String
+  nombre      String
+  apellido    String
+  password    String
+  email       String      @unique
+  dni         String      @unique
+  rol         Rol
+  isActive    Boolean     @default(true)
   direcciones Direccion[] @relation("UsuarioDirecciones")
 
-  @@map("usuarios") 
+  @@map("usuarios")
 }
 
 model Direccion {
-  id               Int       @id @default(autoincrement())
-  calle            String
-  numero           Int       
-  deptoNro         Int
-  codigoPostal     Int
-  localidadId      Int
-  localidad        Localidad @relation(fields: [localidadId], references: [id])
-
-  usuarios         Usuario[] @relation("UsuarioDirecciones")
-
-  ordenes          OrdenCompra[]  
+  id           Int           @id @default(autoincrement())
+  calle        String
+  numero       Int
+  deptoNro     Int
+  codigoPostal Int
+  localidadId  Int
+  isActive     Boolean       @default(true)
+  localidad    Localidad     @relation(fields: [localidadId], references: [id])
+  ordenes      OrdenCompra[]
+  usuarios     Usuario[]     @relation("UsuarioDirecciones")
 
   @@map("direcciones")
 }
@@ -47,102 +41,106 @@ model Localidad {
   id          Int         @id @default(autoincrement())
   nombre      String
   provinciaId Int
-  provincia   Provincia   @relation(fields: [provinciaId], references: [id])
+  isActive    Boolean     @default(true)
   direcciones Direccion[]
+  provincia   Provincia   @relation(fields: [provinciaId], references: [id])
 
   @@map("localidades")
 }
 
 model Provincia {
-  id         Int        @id @default(autoincrement())
-  nombre     String
-  paisId     Int
-  pais       Pais       @relation(fields: [paisId], references: [id])
+  id          Int         @id @default(autoincrement())
+  nombre      String
+  paisId      Int
+  isActive    Boolean     @default(true)
   localidades Localidad[]
+  pais        Pais        @relation(fields: [paisId], references: [id])
 
   @@map("provincias")
 }
 
 model Pais {
-  id         Int         @id @default(autoincrement())
-  nombre     String      
-  provincias Provincia[]
+  id          Int         @id @default(autoincrement())
+  nombre      String
+  isActive    Boolean     @default(true)
+  provincias  Provincia[]
 
   @@map("paises")
 }
 
 model OrdenCompra {
-  id             Int                  @id @default(autoincrement())
-  total          Float
-  fechaDeCompra  DateTime
-  direccionId    Int
-  direccion      Direccion            @relation(fields: [direccionId], references: [id])
-  detalles       OrdenCompraDetalle[]
+  id            Int                  @id @default(autoincrement())
+  total         Float
+  fechaDeCompra DateTime
+  direccionId   Int
+  isActive      Boolean     @default(true)
+  direccion     Direccion            @relation(fields: [direccionId], references: [id])
+  detalles      OrdenCompraDetalle[]
 
   @@map("orden_compra")
 }
 
 model OrdenCompraDetalle {
-  id                Int               @id @default(autoincrement())
+  id                Int             @id @default(autoincrement())
   cantidad          Int
   subtotal          Float
   ordenCompraId     Int
-  ordenCompra       OrdenCompra       @relation(fields: [ordenCompraId], references: [id])
   detalleProductoId Int
-  detalleProducto   DetalleProducto   @relation(fields: [detalleProductoId], references: [id])
+  isActive          Boolean         @default(true)
+  detalleProducto   DetalleProducto @relation(fields: [detalleProductoId], references: [id])
+  ordenCompra       OrdenCompra     @relation(fields: [ordenCompraId], references: [id])
 
   @@map("orden_compra_detalle")
 }
 
 model DetalleProducto {
-  id               Int                   @id @default(autoincrement())
-  estado           Boolean
-  talle            Talle
-  color            Color
-  marca            String
-  stock            Int
-  productoId       Int
-  producto         Producto              @relation(fields: [productoId], references: [id])
-  precioId         Int
-  precio           Precio                @relation(fields: [precioId], references: [id])
-
-  imagenes         Imagen[]              
-
-  ordenes          OrdenCompraDetalle[]
+  id         Int                  @id @default(autoincrement())
+  estado     Boolean
+  talle      Talle
+  color      Color
+  marca      String
+  stock      Int
+  productoId Int
+  precioId   Int
+  isActive   Boolean              @default(true)
+  precio     Precio               @relation(fields: [precioId], references: [id])
+  producto   Producto             @relation(fields: [productoId], references: [id])
+  imagenes   Imagen[]
+  ordenes    OrdenCompraDetalle[]
 
   @@map("detalleProductos")
 }
 
 model Imagen {
-  id               Int               @id @default(autoincrement())
-  url              String
-  detalleProductoId Int               // <== llave foránea
-  detalleProducto   DetalleProducto   @relation(fields: [detalleProductoId], references: [id])
+  id                Int             @id @default(autoincrement())
+  url               String
+  detalleProductoId Int
+  isActive          Boolean         @default(true)
+  detalleProducto   DetalleProducto @relation(fields: [detalleProductoId], references: [id])
 
   @@map("imagen")
 }
 
 model Categoria {
-  id               Int         @id @default(autoincrement())
-  nombre           String
-  categoriaPadreId Int?        
-  categoriaPadre   Categoria?  @relation("CategoriaSubcategorias", fields: [categoriaPadreId], references: [id])
-  subcategorias    Categoria[] @relation("CategoriaSubcategorias")
-
+  id                 Int                 @id @default(autoincrement())
+  nombre             String
+  categoriaPadreId   Int?
+  isActive           Boolean             @default(true)
+  categoriaPadre     Categoria?          @relation("CategoriaSubcategorias", fields: [categoriaPadreId], references: [id])
+  subcategorias      Categoria[]         @relation("CategoriaSubcategorias")
   productoCategorias ProductoCategoria[]
 
   @@map("categorias")
 }
 
 model Producto {
-  id               Int               @id @default(autoincrement())
-  nombre           String
-  sexo             Sexo
-  tipoProducto     TipoProducto
-
+  id                 Int                 @id @default(autoincrement())
+  nombre             String
+  sexo               Sexo
+  tipoProducto       TipoProducto
+  isActive           Boolean             @default(true)
+  detalleProductos   DetalleProducto[]
   productoCategorias ProductoCategoria[]
-
-  detalleProductos DetalleProducto[]
 
   @@map("productos")
 }
@@ -150,32 +148,31 @@ model Producto {
 model ProductoCategoria {
   productoId  Int
   categoriaId Int
-
-  producto    Producto  @relation(fields: [productoId], references: [id])
+  isActive    Boolean   @default(true)
   categoria   Categoria @relation(fields: [categoriaId], references: [id])
+  producto    Producto  @relation(fields: [productoId], references: [id])
 
   @@id([productoId, categoriaId])
   @@map("producto_categorias")
 }
 
 model Descuento {
-  id          Int       @id @default(autoincrement())
-  porcentaje  Float?
-  fechaInicio DateTime? @map("fecha_inicio")
-  fechaFinal  DateTime? @map("fecha_final")
-
+  id               Int               @id @default(autoincrement())
+  porcentaje       Float?
+  fechaInicio      DateTime?         @map("fecha_inicio")
+  fechaFinal       DateTime?         @map("fecha_final")
+  isActive         Boolean           @default(true)
   precioDescuentos PrecioDescuento[]
 
   @@map("descuentos")
 }
 
 model Precio {
-  id               Int                @id @default(autoincrement())
-  precioCompra     Float              @map("precio_compra")
-  precioVenta      Float              @map("precio_venta")
-
-  detalleProductos DetalleProducto[]  
-
+  id               Int               @id @default(autoincrement())
+  precioCompra     Float             @map("precio_compra")
+  precioVenta      Float             @map("precio_venta")
+  isActive         Boolean           @default(true)
+  detalleProductos DetalleProducto[]
   precioDescuentos PrecioDescuento[]
 
   @@map("precios")
@@ -184,15 +181,13 @@ model Precio {
 model PrecioDescuento {
   descuentoId Int
   precioId    Int
-
+  isActive    Boolean   @default(true)
   descuento   Descuento @relation(fields: [descuentoId], references: [id])
   precio      Precio    @relation(fields: [precioId], references: [id])
 
   @@id([descuentoId, precioId])
   @@map("precioid_descuentoid")
 }
-
-
 
 enum Rol {
   ADMIN

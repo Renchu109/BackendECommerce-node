@@ -3,4 +3,5 @@ export interface IOrdenCompra {
   total: number;
   fechaDeCompra: Date;
   direccionId: number;
+  isActive: boolean;
 }

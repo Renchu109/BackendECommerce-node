@@ -57,7 +57,11 @@ export const createBuyOrderDetail = async (req: Request, res: Response): Promise
 // traer todos los detalles de órdenes de compra [GET-ALL]
 export const getAllBuyOrderDetails = async (req: Request, res: Response): Promise<void> => {
     try {
-        const buyOrderDetails = await prisma.findMany();
+        const buyOrderDetails = await prisma.findMany({
+            /*where: {
+                isActive: true
+            }*/
+        });
         res.status(200).json(buyOrderDetails);
     } catch (error: any) {
         console.log(error);
@@ -74,7 +78,8 @@ export const getBuyOrderDetailById = async (req: Request, res: Response): Promis
 
         const buyOrderDetail = await prisma.findUnique({
             where: {
-                id: buyOrderDetailId
+                id: buyOrderDetailId,
+                isActive: true
             }
         })
 
@@ -101,6 +106,17 @@ export const updateBuyOrderDetail = async (req: Request, res: Response): Promise
 
     try {
 
+        const buyOrderDetail = await prisma.findUnique({
+        where: { id: buyOrderDetailId }
+        });
+
+        if (!buyOrderDetail || !buyOrderDetail.isActive) {
+            res.status(400).json({
+                message: `El detalle de orden de compra ${buyOrderDetailId} fue eliminado o no existe, y no se puede editar.`
+            });
+            return;
+        }
+
         let dataToUpdate: any = { ...req.body }
 
         if (cantidad) {
@@ -120,14 +136,14 @@ export const updateBuyOrderDetail = async (req: Request, res: Response): Promise
         }
 
 
-        const buyOrderDetail = await prisma.update({
+        const updatedBuyOrderDetail = await prisma.update({
             where: {
                 id: buyOrderDetailId
             },
             data: dataToUpdate
         })
 
-        res.status(200).json(buyOrderDetail);
+        res.status(200).json(updatedBuyOrderDetail);
 
     } catch (error: any) {
         if (error?.code == 'P2025') {
@@ -148,9 +164,12 @@ export const deleteBuyOrderDetail = async (req: Request, res: Response): Promise
 
     try {
         
-        await prisma.delete({
+        await prisma.update({
             where: {
                 id: buyOrderDetailId
+            },
+            data: {
+                isActive: false
             }
         })
 

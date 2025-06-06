@@ -50,7 +50,11 @@ export const createProvince = async (req: Request, res: Response): Promise<void>
 // traer todas las provincias [GET-ALL]
 export const getAllProvinces = async (req: Request, res: Response): Promise<void> => {
     try {
-        const provinces = await prisma.findMany();
+        const provinces = await prisma.findMany({
+            /*where: {
+                isActive: true
+            }*/
+        });
         res.status(200).json(provinces);
     } catch (error: any) {
         console.log(error);
@@ -67,7 +71,8 @@ export const getProvinceById = async (req: Request, res: Response): Promise<void
 
         const province = await prisma.findUnique({
             where: {
-                id: provinceId
+                id: provinceId,
+                isActive: true
             }
         })
 
@@ -94,6 +99,17 @@ export const updateProvince = async (req: Request, res: Response): Promise<void>
 
     try {
 
+        const province = await prisma.findUnique({
+        where: { id: provinceId }
+        });
+
+        if (!province || !province.isActive) {
+            res.status(400).json({
+                message: `La provincia ${provinceId} fue eliminada o no existe, y no se puede editar.`
+            });
+            return;
+        }
+
         let dataToUpdate: any = { ...req.body }
 
         if (nombre) {
@@ -104,14 +120,14 @@ export const updateProvince = async (req: Request, res: Response): Promise<void>
             dataToUpdate.paisId = paisId;
         }
 
-        const province = await prisma.update({
+        const updatedProvince = await prisma.update({
             where: {
                 id: provinceId
             },
             data: dataToUpdate
         })
 
-        res.status(200).json(province);
+        res.status(200).json(updatedProvince);
 
     } catch (error: any) {
         if (error?.code === 'P2002' && error?.meta?.target?.includes('nombre')) {
@@ -136,9 +152,12 @@ export const deleteProvince = async (req: Request, res: Response): Promise<void>
 
     try {
         
-        await prisma.delete({
+        await prisma.update({
             where: {
                 id: provinceId
+            },
+            data: {
+                isActive: false
             }
         })
 

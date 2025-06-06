@@ -51,7 +51,11 @@ export const createProduct = async (req: Request, res: Response): Promise<void> 
 // traer todos los productos [GET-ALL]
 export const getAllProducts = async (req: Request, res: Response): Promise<void> => {
     try {
-        const products = await prisma.findMany();
+        const products = await prisma.findMany({
+            /*where: {
+                isActive: true
+            }*/
+        });
         res.status(200).json(products);
     } catch (error: any) {
         console.log(error);
@@ -68,7 +72,8 @@ export const getProductById = async (req: Request, res: Response): Promise<void>
 
         const product = await prisma.findUnique({
             where: {
-                id: productId
+                id: productId,
+                isActive: true
             }
         })
 
@@ -95,6 +100,17 @@ export const updateProduct = async (req: Request, res: Response): Promise<void> 
 
     try {
 
+        const product = await prisma.findUnique({
+        where: { id: productId }
+        });
+
+        if (!product || !product.isActive) {
+            res.status(400).json({
+                message: `El producto ${productId} fue eliminado o no existe, y no se puede editar.`
+            });
+            return;
+        }
+
         let dataToUpdate: any = { ...req.body }
 
         if (nombre) {
@@ -109,14 +125,14 @@ export const updateProduct = async (req: Request, res: Response): Promise<void> 
             dataToUpdate.tipoProducto = tipoProducto;
         }
 
-        const product = await prisma.update({
+        const updatedProduct = await prisma.update({
             where: {
                 id: productId
             },
             data: dataToUpdate
         })
 
-        res.status(200).json(product);
+        res.status(200).json(updatedProduct);
 
     } catch (error: any) {
         if (error?.code == 'P2025') {
@@ -137,9 +153,12 @@ export const deleteProduct = async (req: Request, res: Response): Promise<void> 
 
     try {
         
-        await prisma.delete({
+        await prisma.update({
             where: {
                 id: productId
+            },
+            data: {
+                isActive: false
             }
         })
 

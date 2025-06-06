@@ -50,7 +50,11 @@ export const createBuyOrder = async (req: Request, res: Response): Promise<void>
 // traer todas las órdenes de compra [GET-ALL]
 export const getAllBuyOrders = async (req: Request, res: Response): Promise<void> => {
     try {
-        const buyOrders = await prisma.findMany();
+        const buyOrders = await prisma.findMany({
+            /*where: {
+                isActive: true
+            }*/
+        });
         res.status(200).json(buyOrders);
     } catch (error: any) {
         console.log(error);
@@ -67,7 +71,8 @@ export const getBuyOrderById = async (req: Request, res: Response): Promise<void
 
         const buyOrder = await prisma.findUnique({
             where: {
-                id: buyOrderId
+                id: buyOrderId,
+                isActive: true
             }
         })
 
@@ -94,6 +99,17 @@ export const updateBuyOrder = async (req: Request, res: Response): Promise<void>
 
     try {
 
+        const buyOrder = await prisma.findUnique({
+        where: { id: buyOrderId }
+        });
+
+        if (!buyOrder || !buyOrder.isActive) {
+            res.status(400).json({
+                message: `La orden de compra ${buyOrder} fue eliminada o no existe, y no se puede editar.`
+            });
+            return;
+        }
+
         let dataToUpdate: any = { ...req.body }
 
         if (total) {
@@ -109,14 +125,14 @@ export const updateBuyOrder = async (req: Request, res: Response): Promise<void>
         }
 
 
-        const buyOrder = await prisma.update({
+        const updatedBuyOrder = await prisma.update({
             where: {
                 id: buyOrderId
             },
             data: dataToUpdate
         })
 
-        res.status(200).json(buyOrder);
+        res.status(200).json(updatedBuyOrder);
 
     } catch (error: any) {
         if (error?.code == 'P2025') {
@@ -137,9 +153,12 @@ export const deleteBuyOrder = async (req: Request, res: Response): Promise<void>
 
     try {
         
-        await prisma.delete({
+        await prisma.update({
             where: {
                 id: buyOrderId
+            },
+            data: {
+                isActive: false
             }
         })
 

@@ -4,4 +4,5 @@ export interface IOrdenCompraDetalle {
   subtotal: number;
   ordenCompraId: number;
   detalleProductoId: number;
+  isActive: boolean;
 }

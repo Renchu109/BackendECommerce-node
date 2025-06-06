@@ -5,4 +5,5 @@ export interface IProducto {
   nombre: string;
   sexo: Sexo;
   tipoProducto: TipoProducto;
+  isActive: boolean;
 }

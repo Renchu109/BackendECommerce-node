@@ -3,4 +3,5 @@ export interface IDescuento {
   porcentaje?: number;
   fechaInicio?: Date;
   fechaFinal?: Date;
+  isActive: boolean;
 }

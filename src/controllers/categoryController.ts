@@ -38,7 +38,11 @@ export const createCategory = async (req: Request, res: Response): Promise<void>
 // traer todas las categorías [GET-ALL]
 export const getAllCategories = async (req: Request, res: Response): Promise<void> => {
     try {
-        const categories = await prisma.findMany();
+        const categories = await prisma.findMany({
+            /*where: {
+                isActive: true
+            }*/
+        });
         res.status(200).json(categories);
     } catch (error: any) {
         console.log(error);
@@ -55,7 +59,8 @@ export const getCategoryById = async (req: Request, res: Response): Promise<void
 
         const category = await prisma.findUnique({
             where: {
-                id: categoryId
+                id: categoryId,
+                isActive: true
             }
         })
 
@@ -82,6 +87,17 @@ export const updateCategory = async (req: Request, res: Response): Promise<void>
 
     try {
 
+        const category = await prisma.findUnique({
+        where: { id: categoryId }
+        });
+
+        if (!category || !category.isActive) {
+            res.status(400).json({
+                message: `La categoría ${categoryId} fue eliminada o no existe, y no se puede editar.`
+            });
+            return;
+        }
+
         let dataToUpdate: any = { ...req.body }
 
         if (nombre) {
@@ -92,14 +108,14 @@ export const updateCategory = async (req: Request, res: Response): Promise<void>
             dataToUpdate.categoriaPadreId = categoriaPadreId;
         }
 
-        const category = await prisma.update({
+        const updatedCategory = await prisma.update({
             where: {
                 id: categoryId
             },
             data: dataToUpdate
         })
 
-        res.status(200).json(category);
+        res.status(200).json(updatedCategory);
 
     } catch (error: any) {
         if (error?.code == 'P2025') {
@@ -120,9 +136,12 @@ export const deleteCategory = async (req: Request, res: Response): Promise<void>
 
     try {
         
-        await prisma.delete({
+        await prisma.update({
             where: {
                 id: categoryId
+            },
+            data: {
+                isActive: false
             }
         })
 

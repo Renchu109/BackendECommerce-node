@@ -86,7 +86,11 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
 // traer todos los usuarios [GET-ALL]
 export const getAllUsers = async (req: Request, res: Response): Promise<void> => {
     try {
-        const users = await prisma.findMany();
+        const users = await prisma.findMany({
+            /*where: {
+                isActive: true
+            }*/
+        });
         res.status(200).json(users);
     } catch (error: any) {
         console.log(error);
@@ -103,7 +107,8 @@ export const getUserById = async (req: Request, res: Response): Promise<void> =>
 
         const user = await prisma.findUnique({
             where: {
-                id: userId
+                id: userId,
+                isActive: true
             }
         })
 
@@ -128,7 +133,19 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
     const userId = parseInt(req.params.id);
     const { email, password } = req.body;
 
+    
     try {
+
+        const user = await prisma.findUnique({
+        where: { id: userId }
+        });
+
+        if (!user || !user.isActive) {
+            res.status(400).json({
+                message: `El usuario ${userId} fue eliminado o no existe, y no se puede editar.`
+            });
+            return;
+        }
 
         let dataToUpdate: any = { ...req.body }
 
@@ -141,14 +158,14 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
             dataToUpdate.email = email;
         }
 
-        const user = await prisma.update({
+        const updatedUser = await prisma.update({
             where: {
                 id: userId
             },
             data: dataToUpdate
         })
 
-        res.status(200).json(user);
+        res.status(200).json(updatedUser);
 
     } catch (error: any) {
         if (error?.code === 'P2002' && error?.meta?.target?.includes('email')) {
@@ -173,9 +190,12 @@ export const deleteUser = async (req: Request, res: Response): Promise<void> => 
 
     try {
         
-        await prisma.delete({
+        await prisma.update({
             where: {
                 id: userId
+            },
+            data: {
+                isActive: false
             }
         })
 
@@ -183,14 +203,9 @@ export const deleteUser = async (req: Request, res: Response): Promise<void> => 
             message: `El usuario ${userId} fue eliminado`
         }).end()
 
-    } catch (error:any) {
-        if (error?.code == 'P2025') {
-            res.status(400).json({
-                error: 'Usuario no encontrado'
-            })
-        } else {
-            console.log(error);
-            res.status(500).json({ error: 'Hubo un error, pruebe más tarde' })
-        }
+    } catch (error) {
+        res.status(400).json({
+            error: 'Usuario no encontrado'
+        })
     }
 }

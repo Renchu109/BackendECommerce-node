@@ -50,7 +50,11 @@ export const createLocality = async (req: Request, res: Response): Promise<void>
 // traer todas las localidades [GET-ALL]
 export const getAllLocalities = async (req: Request, res: Response): Promise<void> => {
     try {
-        const localities = await prisma.findMany();
+        const localities = await prisma.findMany({
+            /*where: {
+                isActive: true
+            }*/
+        });
         res.status(200).json(localities);
     } catch (error: any) {
         console.log(error);
@@ -67,7 +71,8 @@ export const getLocalityById = async (req: Request, res: Response): Promise<void
 
         const locality = await prisma.findUnique({
             where: {
-                id: localityId
+                id: localityId,
+                isActive: true
             }
         })
 
@@ -94,6 +99,17 @@ export const updateLocality = async (req: Request, res: Response): Promise<void>
 
     try {
 
+        const locality = await prisma.findUnique({
+        where: { id: localityId }
+        });
+
+        if (!locality || !locality.isActive) {
+            res.status(400).json({
+                message: `La localidad ${localityId} fue eliminada o no existe, y no se puede editar.`
+            });
+            return;
+        }
+
         let dataToUpdate: any = { ...req.body }
 
         if (nombre) {
@@ -104,14 +120,14 @@ export const updateLocality = async (req: Request, res: Response): Promise<void>
             dataToUpdate.provinceId = provinceId;
         }
 
-        const locality = await prisma.update({
+        const updatedLocality = await prisma.update({
             where: {
                 id: localityId
             },
             data: dataToUpdate
         })
 
-        res.status(200).json(locality);
+        res.status(200).json(updatedLocality);
 
     } catch (error: any) {
         if (error?.code === 'P2002' && error?.meta?.target?.includes('nombre')) {
@@ -136,9 +152,12 @@ export const deleteLocality = async (req: Request, res: Response): Promise<void>
 
     try {
         
-        await prisma.delete({
+        await prisma.update({
             where: {
                 id: localityId
+            },
+            data: {
+                isActive: false
             }
         })
 

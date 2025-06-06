@@ -31,7 +31,11 @@ export const createDiscount = async (req: Request, res: Response): Promise<void>
 // traer todos los descuentos [GET-ALL]
 export const getAllDiscounts = async (req: Request, res: Response): Promise<void> => {
     try {
-        const discounts = await prisma.findMany();
+        const discounts = await prisma.findMany({
+            /*where: {
+                isActive: true
+            }*/
+        });
         res.status(200).json(discounts);
     } catch (error: any) {
         console.log(error);
@@ -48,7 +52,8 @@ export const getDiscountById = async (req: Request, res: Response): Promise<void
 
         const discount = await prisma.findUnique({
             where: {
-                id: discountId
+                id: discountId,
+                isActive: true
             }
         })
 
@@ -75,6 +80,17 @@ export const updateDiscount = async (req: Request, res: Response): Promise<void>
 
     try {
 
+        const discount = await prisma.findUnique({
+        where: { id: discountId }
+        });
+
+        if (!discount || !discount.isActive) {
+            res.status(400).json({
+                message: `El descuento ${discountId} fue eliminado o no existe, y no se puede editar.`
+            });
+            return;
+        }
+
         let dataToUpdate: any = { ...req.body }
 
         if (porcentaje) {
@@ -89,14 +105,14 @@ export const updateDiscount = async (req: Request, res: Response): Promise<void>
             dataToUpdate.fechaFinal = fechaFinal;
         }
 
-        const discount = await prisma.update({
+        const updatedDiscount = await prisma.update({
             where: {
                 id: discountId
             },
             data: dataToUpdate
         })
 
-        res.status(200).json(discount);
+        res.status(200).json(updatedDiscount);
 
     } catch (error: any) {
 
@@ -118,9 +134,12 @@ export const deleteDiscount = async (req: Request, res: Response): Promise<void>
 
     try {
         
-        await prisma.delete({
+        await prisma.update({
             where: {
                 id: discountId
+            },
+            data: {
+                isActive: false
             }
         })
 
