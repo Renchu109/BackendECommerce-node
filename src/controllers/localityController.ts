@@ -1,5 +1,7 @@
 import { Request, Response } from "express";
-import prisma from '../models/locality';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 
 // crear localidad [POST]
@@ -22,7 +24,18 @@ export const createLocality = async (req: Request, res: Response): Promise<void>
             return
         }
 
-        const locality = await prisma.create(
+        const provincia = await prisma.provincia.findUnique({
+            where: { id: provinciaId },
+        });
+        
+        if (!provincia || provincia.isActive === false) {
+            res.status(400).json({ 
+                message: 'No se puede asignar una provincia inactiva a una localidad' 
+            });
+            return;
+        }
+
+        const locality = await prisma.localidad.create(
             {
                 data: {
                     nombre,
@@ -50,10 +63,18 @@ export const createLocality = async (req: Request, res: Response): Promise<void>
 // traer todas las localidades [GET-ALL]
 export const getAllLocalities = async (req: Request, res: Response): Promise<void> => {
     try {
-        const localities = await prisma.findMany({
-            /*where: {
+        const localities = await prisma.localidad.findMany({
+            where: {
                 isActive: true
-            }*/
+            },
+            include: {
+                provincia: {
+                    include: {
+                        pais: true,
+                    },
+                },
+                direcciones: true,
+            },
         });
         res.status(200).json(localities);
     } catch (error: any) {
@@ -69,11 +90,19 @@ export const getLocalityById = async (req: Request, res: Response): Promise<void
 
     try {
 
-        const locality = await prisma.findUnique({
+        const locality = await prisma.localidad.findUnique({
             where: {
                 id: localityId,
                 isActive: true
-            }
+            },
+            include: {
+                provincia: {
+                    include: {
+                        pais: true,
+                    },
+                },
+                direcciones: true,
+            },
         })
 
         if (!locality) {
@@ -95,12 +124,12 @@ export const getLocalityById = async (req: Request, res: Response): Promise<void
 export const updateLocality = async (req: Request, res: Response): Promise<void> => {
 
     const localityId = parseInt(req.params.id);
-    const { nombre, provinceId  } = req.body;
+    const { nombre, provinciaId } = req.body;
 
     try {
 
-        const locality = await prisma.findUnique({
-        where: { id: localityId }
+        const locality = await prisma.localidad.findUnique({
+            where: { id: localityId }
         });
 
         if (!locality || !locality.isActive) {
@@ -116,11 +145,22 @@ export const updateLocality = async (req: Request, res: Response): Promise<void>
             dataToUpdate.nombre = nombre;
         }
 
-        if (provinceId) {
-            dataToUpdate.provinceId = provinceId;
+        if (provinciaId) {
+            const provincia = await prisma.provincia.findUnique({
+                where: { id: provinciaId },
+            });
+            
+            if (!provincia || provincia.isActive === false) {
+                res.status(400).json({ 
+                    message: 'No se puede asignar una provincia inactiva a una localidad' 
+                });
+                return;
+            }
+            
+            dataToUpdate.provinciaId = provinciaId;
         }
 
-        const updatedLocality = await prisma.update({
+        const updatedLocality = await prisma.localidad.update({
             where: {
                 id: localityId
             },
@@ -151,8 +191,8 @@ export const deleteLocality = async (req: Request, res: Response): Promise<void>
     const localityId = parseInt(req.params.id);
 
     try {
-        
-        await prisma.update({
+
+        await prisma.localidad.update({
             where: {
                 id: localityId
             },
@@ -165,7 +205,7 @@ export const deleteLocality = async (req: Request, res: Response): Promise<void>
             message: `La localidad ${localityId} fue eliminada`
         }).end()
 
-    } catch (error:any) {
+    } catch (error: any) {
         if (error?.code == 'P2025') {
             res.status(400).json({
                 error: 'Localidad no encontrada'

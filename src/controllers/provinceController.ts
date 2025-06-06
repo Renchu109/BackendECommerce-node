@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
-import prisma from '../models/provinces';
+import { PrismaClient } from '@prisma/client';
 
+const prisma = new PrismaClient();
 
 // crear provincia [POST]
 export const createProvince = async (req: Request, res: Response): Promise<void> => {
@@ -12,17 +13,28 @@ export const createProvince = async (req: Request, res: Response): Promise<void>
             res.status(400).json({
                 message: 'El nombre es obligatorio'
             })
-            return
+            return;
         }
-
+        
         if (!paisId) {
             res.status(400).json({
                 message: 'El id del pais es obligatorio'
             })
-            return
+            return;
+        }
+        
+        const pais = await prisma.pais.findUnique({
+            where: { id: paisId },
+        });
+        
+        if (!pais || pais.isActive === false) {
+            res.status(400).json({ 
+                message: 'No se puede asignar un país inactivo a una provincia' 
+            });
+            return;
         }
 
-        const province = await prisma.create(
+        const province = await prisma.provincia.create(
             {
                 data: {
                     nombre,
@@ -50,10 +62,18 @@ export const createProvince = async (req: Request, res: Response): Promise<void>
 // traer todas las provincias [GET-ALL]
 export const getAllProvinces = async (req: Request, res: Response): Promise<void> => {
     try {
-        const provinces = await prisma.findMany({
-            /*where: {
+        const provinces = await prisma.provincia.findMany({
+            where: {
                 isActive: true
-            }*/
+            },
+            include: {
+                pais: true,
+                localidades: {
+                    include: {
+                        direcciones: true,
+                    },
+                },
+            },
         });
         res.status(200).json(provinces);
     } catch (error: any) {
@@ -69,11 +89,19 @@ export const getProvinceById = async (req: Request, res: Response): Promise<void
 
     try {
 
-        const province = await prisma.findUnique({
+        const province = await prisma.provincia.findUnique({
             where: {
                 id: provinceId,
                 isActive: true
-            }
+            },
+            include: {
+                pais: true,
+                localidades: {
+                    include: {
+                        direcciones: true,
+                    },
+                },
+            },
         })
 
         if (!province) {
@@ -95,12 +123,12 @@ export const getProvinceById = async (req: Request, res: Response): Promise<void
 export const updateProvince = async (req: Request, res: Response): Promise<void> => {
 
     const provinceId = parseInt(req.params.id);
-    const { nombre,paisId  } = req.body;
+    const { nombre, paisId } = req.body;
 
     try {
 
-        const province = await prisma.findUnique({
-        where: { id: provinceId }
+        const province = await prisma.provincia.findUnique({
+            where: { id: provinceId }
         });
 
         if (!province || !province.isActive) {
@@ -117,10 +145,21 @@ export const updateProvince = async (req: Request, res: Response): Promise<void>
         }
 
         if (paisId) {
+            const pais = await prisma.pais.findUnique({
+                where: { id: paisId },
+            });
+            
+            if (!pais || pais.isActive === false) {
+                res.status(400).json({ 
+                    message: 'No se puede asignar un país inactivo a una provincia' 
+                });
+                return;
+            }
+
             dataToUpdate.paisId = paisId;
         }
 
-        const updatedProvince = await prisma.update({
+        const updatedProvince = await prisma.provincia.update({
             where: {
                 id: provinceId
             },
@@ -151,8 +190,8 @@ export const deleteProvince = async (req: Request, res: Response): Promise<void>
     const provinceId = parseInt(req.params.id);
 
     try {
-        
-        await prisma.update({
+
+        await prisma.provincia.update({
             where: {
                 id: provinceId
             },
@@ -165,7 +204,7 @@ export const deleteProvince = async (req: Request, res: Response): Promise<void>
             message: `La provincia ${provinceId} fue eliminada`
         }).end()
 
-    } catch (error:any) {
+    } catch (error: any) {
         if (error?.code == 'P2025') {
             res.status(400).json({
                 error: 'Provincia no encontrada'

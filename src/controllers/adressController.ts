@@ -1,12 +1,13 @@
 import { Request, Response } from "express";
-import prisma from '../models/adress';
+import { PrismaClient } from '@prisma/client';
 
+const prisma = new PrismaClient();
 
 // crear direccion [POST]
 export const createAdress = async (req: Request, res: Response): Promise<void> => {
     try {
 
-        const { calle, numero, deptoNro, codigoPostal, localidadId } = req.body
+        const { calle, numero, deptoNro, codigoPostal, localidadId, usuarioId } = req.body
 
         if (!calle) {
             res.status(400).json({
@@ -39,17 +40,49 @@ export const createAdress = async (req: Request, res: Response): Promise<void> =
             return
         }
 
-        const adress = await prisma.create(
+        const localidad = await prisma.localidad.findUnique({
+            where: { id: localidadId },
+        });
+        
+        if (!localidad || localidad.isActive === false) {
+            res.status(400).json({ 
+                message: 'No se puede asignar una localidad inactiva a una dirección' 
+            });
+            return;
+        }
+
+        const adress = await prisma.direccion.create(
             {
                 data: {
-                    calle, 
-                    numero, 
-                    deptoNro, 
-                    codigoPostal, 
+                    calle,
+                    numero,
+                    deptoNro,
+                    codigoPostal,
                     localidadId
                 }
             }
         )
+
+        if (usuarioId) {
+            const user = await prisma.usuario.findUnique({
+                where: {
+                    id: usuarioId
+                }
+            });
+            if (!user) {
+                res.status(404).json({
+                    message: 'Usuario no encontrado'
+                });
+                return;
+            }
+
+            await prisma.usuarioDireccion.create({
+                data: {
+                    usuarioId,
+                    direccionId: adress.id,
+                },
+            });
+        }
 
         res.status(201).json(adress)
 
@@ -64,10 +97,45 @@ export const createAdress = async (req: Request, res: Response): Promise<void> =
 // traer todas las direcciones [GET-ALL]
 export const getAllAdresses = async (req: Request, res: Response): Promise<void> => {
     try {
-        const adresses = await prisma.findMany({
-            /*where: {
+        const adresses = await prisma.direccion.findMany({
+            where: {
                 isActive: true
-            }*/
+            },
+            include: {
+                localidad: {
+                    include: {
+                        provincia: {
+                            include: {
+                                pais: true
+                            }
+                        }
+                    }
+                },
+                usuarioDirecciones: true,
+                ordenes: {
+                    include: {
+                        detalles: {
+                            include: {
+                                detalleProducto: {
+                                    include: {
+                                        producto: {
+                                            include: {
+                                                productoCategorias: {
+                                                    include: {
+                                                        categoria: true
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        precio: true,
+                                        imagenes: true
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         });
         res.status(200).json(adresses);
     } catch (error: any) {
@@ -83,10 +151,45 @@ export const getAdressById = async (req: Request, res: Response): Promise<void> 
 
     try {
 
-        const adress = await prisma.findUnique({
+        const adress = await prisma.direccion.findUnique({
             where: {
                 id: adressId,
                 isActive: true
+            },
+            include: {
+                localidad: {
+                    include: {
+                        provincia: {
+                            include: {
+                                pais: true
+                            }
+                        }
+                    }
+                },
+                usuarioDirecciones: true,
+                ordenes: {
+                    include: {
+                        detalles: {
+                            include: {
+                                detalleProducto: {
+                                    include: {
+                                        producto: {
+                                            include: {
+                                                productoCategorias: {
+                                                    include: {
+                                                        categoria: true
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        precio: true,
+                                        imagenes: true
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         })
 
@@ -109,12 +212,12 @@ export const getAdressById = async (req: Request, res: Response): Promise<void> 
 export const updateAdress = async (req: Request, res: Response): Promise<void> => {
 
     const adressId = parseInt(req.params.id);
-    const { calle, numero, deptoNro, codigoPostal } = req.body
+    const { calle, numero, deptoNro, codigoPostal, localidadId } = req.body
 
     try {
 
-        const adress = await prisma.findUnique({
-        where: { id: adressId }
+        const adress = await prisma.direccion.findUnique({
+            where: { id: adressId }
         });
 
         if (!adress || !adress.isActive) {
@@ -142,8 +245,25 @@ export const updateAdress = async (req: Request, res: Response): Promise<void> =
             dataToUpdate.codigoPostal = codigoPostal;
         }
 
+        if (localidadId) {
+            dataToUpdate.localidadId = localidadId;
+        }
 
-        const updatedAdress = await prisma.update({
+        if(localidadId){
+
+            const localidad = await prisma.localidad.findUnique({
+                where: { id: localidadId },
+            });
+            
+            if (!localidad || localidad.isActive === false) {
+                res.status(400).json({ 
+                    message: 'No se puede asignar una localidad inactiva a una dirección' 
+                });
+                return;
+            }
+        }
+
+        const updatedAdress = await prisma.direccion.update({
             where: {
                 id: adressId
             },
@@ -170,8 +290,8 @@ export const deleteAdress = async (req: Request, res: Response): Promise<void> =
     const adressId = parseInt(req.params.id);
 
     try {
-        
-        await prisma.update({
+
+        await prisma.direccion.update({
             where: {
                 id: adressId
             },
@@ -184,7 +304,7 @@ export const deleteAdress = async (req: Request, res: Response): Promise<void> =
             message: `La dirección ${adressId} fue eliminada`
         }).end()
 
-    } catch (error:any) {
+    } catch (error: any) {
         if (error?.code == 'P2025') {
             res.status(400).json({
                 error: 'Dirección no encontrada'

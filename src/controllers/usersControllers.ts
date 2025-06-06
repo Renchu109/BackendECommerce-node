@@ -1,7 +1,8 @@
 import { Request, Response } from "express";
 import { hashPassword } from "../services/password.service";
-import prisma from '../models/user';
+import { PrismaClient } from '@prisma/client';
 
+const prisma = new PrismaClient();
 
 // crear usuario [POST]
 export const createUser = async (req: Request, res: Response): Promise<void> => {
@@ -53,7 +54,7 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
         }
 
         const hashedPassword = await hashPassword(password);
-        const user = await prisma.create(
+        const user = await prisma.usuario.create(
             {
                 data: {
                     email,
@@ -86,10 +87,13 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
 // traer todos los usuarios [GET-ALL]
 export const getAllUsers = async (req: Request, res: Response): Promise<void> => {
     try {
-        const users = await prisma.findMany({
-            /*where: {
+        const users = await prisma.usuario.findMany({
+            where: {
                 isActive: true
-            }*/
+            },
+            include: {
+                usuarioDirecciones: true
+            }
         });
         res.status(200).json(users);
     } catch (error: any) {
@@ -105,10 +109,13 @@ export const getUserById = async (req: Request, res: Response): Promise<void> =>
 
     try {
 
-        const user = await prisma.findUnique({
+        const user = await prisma.usuario.findUnique({
             where: {
                 id: userId,
                 isActive: true
+            },
+            include: {
+                usuarioDirecciones: true
             }
         })
 
@@ -133,11 +140,11 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
     const userId = parseInt(req.params.id);
     const { email, password } = req.body;
 
-    
+
     try {
 
-        const user = await prisma.findUnique({
-        where: { id: userId }
+        const user = await prisma.usuario.findUnique({
+            where: { id: userId }
         });
 
         if (!user || !user.isActive) {
@@ -158,7 +165,7 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
             dataToUpdate.email = email;
         }
 
-        const updatedUser = await prisma.update({
+        const updatedUser = await prisma.usuario.update({
             where: {
                 id: userId
             },
@@ -189,8 +196,8 @@ export const deleteUser = async (req: Request, res: Response): Promise<void> => 
     const userId = parseInt(req.params.id);
 
     try {
-        
-        await prisma.update({
+
+        await prisma.usuario.update({
             where: {
                 id: userId
             },

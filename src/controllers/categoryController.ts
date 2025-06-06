@@ -1,12 +1,15 @@
 import { Request, Response } from "express";
-import prisma from '../models/category';
+import { PrismaClient } from '@prisma/client';
+import categoria from "../models/category";
+
+const prisma = new PrismaClient();
 
 
 // crear categoría [POST]
 export const createCategory = async (req: Request, res: Response): Promise<void> => {
     try {
 
-        const { nombre, categoriaPadreId } = req.body
+        const { nombre, categoriaPadreId, productoId } = req.body
 
         if (!nombre) {
             res.status(400).json({
@@ -15,14 +18,48 @@ export const createCategory = async (req: Request, res: Response): Promise<void>
             return
         }
 
-        const category = await prisma.create(
+        if (categoriaPadreId) {
+            const categoria = await prisma.categoria.findUnique({
+                where: { id: categoriaPadreId },
+            });
+
+            if (!categoria || categoria.isActive === false) {
+                res.status(400).json({
+                    message: 'No se puede asignar una categoría padre inactiva a una subcategoría'
+                });
+                return;
+            }
+        }
+
+        const category = await prisma.categoria.create(
             {
                 data: {
-                    nombre, 
+                    nombre,
                     categoriaPadreId
                 }
             }
         )
+
+        if (productoId) {
+            const producto = await prisma.producto.findUnique({
+                where: {
+                    id: productoId
+                }
+            });
+            if (!producto) {
+                res.status(404).json({
+                    message: 'Producto no encontrado'
+                });
+                return;
+            }
+
+            await prisma.productoCategoria.create({
+                data: {
+                    productoId,
+                    categoriaId: category.id,
+                },
+            });
+        }
 
         res.status(201).json(category)
 
@@ -38,10 +75,26 @@ export const createCategory = async (req: Request, res: Response): Promise<void>
 // traer todas las categorías [GET-ALL]
 export const getAllCategories = async (req: Request, res: Response): Promise<void> => {
     try {
-        const categories = await prisma.findMany({
-            /*where: {
+        const categories = await prisma.categoria.findMany({
+            where: {
                 isActive: true
-            }*/
+            },
+            include: {
+                subcategorias: {
+                    include: {
+                        productoCategorias: {
+                            include: {
+                                producto: true
+                            }
+                        }
+                    }
+                },
+                productoCategorias: {
+                    include: {
+                        producto: true
+                    }
+                }
+            }
         });
         res.status(200).json(categories);
     } catch (error: any) {
@@ -57,10 +110,26 @@ export const getCategoryById = async (req: Request, res: Response): Promise<void
 
     try {
 
-        const category = await prisma.findUnique({
+        const category = await prisma.categoria.findUnique({
             where: {
                 id: categoryId,
                 isActive: true
+            },
+            include: {
+                subcategorias: {
+                    include: {
+                        productoCategorias: {
+                            include: {
+                                producto: true
+                            }
+                        }
+                    }
+                },
+                productoCategorias: {
+                    include: {
+                        producto: true
+                    }
+                }
             }
         })
 
@@ -81,53 +150,72 @@ export const getCategoryById = async (req: Request, res: Response): Promise<void
 
 // editar una categoría [PUT]
 export const updateCategory = async (req: Request, res: Response): Promise<void> => {
-
     const categoryId = parseInt(req.params.id);
-    const { nombre, categoriaPadreId } = req.body
+    const { nombre, categoriaPadreId, productoId } = req.body;
 
     try {
-
-        const category = await prisma.findUnique({
-        where: { id: categoryId }
+        const category = await prisma.categoria.findUnique({
+            where: { id: categoryId },
         });
 
         if (!category || !category.isActive) {
             res.status(400).json({
-                message: `La categoría ${categoryId} fue eliminada o no existe, y no se puede editar.`
+                message: `La categoría ${categoryId} fue eliminada o no existe, y no se puede editar.`,
             });
             return;
         }
 
-        let dataToUpdate: any = { ...req.body }
+        const dataToUpdate: any = {};
 
         if (nombre) {
             dataToUpdate.nombre = nombre;
         }
 
         if (categoriaPadreId) {
+            const categoriaPadre = await prisma.categoria.findUnique({
+                where: { id: categoriaPadreId },
+            });
+
+            if (!categoriaPadre || !categoriaPadre.isActive) {
+                res.status(400).json({
+                    message: 'No se puede asignar una categoría padre inactiva a una subcategoría',
+                });
+                return;
+            }
+
             dataToUpdate.categoriaPadreId = categoriaPadreId;
         }
 
-        const updatedCategory = await prisma.update({
-            where: {
-                id: categoryId
-            },
-            data: dataToUpdate
-        })
+        if (productoId) {
+            const producto = await prisma.categoria.findUnique({
+                where: { id: productoId },
+            });
+
+            if (!producto || !producto.isActive) {
+                res.status(400).json({
+                    message: 'No se puede asignar un producto inactivo a una subcategoría',
+                });
+                return;
+            }
+
+            dataToUpdate.productoId = productoId;
+        }
+
+        const updatedCategory = await prisma.categoria.update({
+            where: { id: categoryId },
+            data: dataToUpdate,
+        });
 
         res.status(200).json(updatedCategory);
-
     } catch (error: any) {
-        if (error?.code == 'P2025') {
-            res.status(400).json({
-                error: 'Categoría no encontrada'
-            })
+        if (error?.code === 'P2025') {
+            res.status(400).json({ error: 'Categoría no encontrada' });
         } else {
-            console.log(error);
-            res.status(500).json({ error: 'Hubo un error, pruebe más tarde' })
+            console.error(error);
+            res.status(500).json({ error: 'Hubo un error, pruebe más tarde' });
         }
     }
-}
+};
 
 // eliminar una categoría [DELETE]
 export const deleteCategory = async (req: Request, res: Response): Promise<void> => {
@@ -135,8 +223,8 @@ export const deleteCategory = async (req: Request, res: Response): Promise<void>
     const categoryId = parseInt(req.params.id);
 
     try {
-        
-        await prisma.update({
+
+        await prisma.categoria.update({
             where: {
                 id: categoryId
             },
@@ -149,7 +237,7 @@ export const deleteCategory = async (req: Request, res: Response): Promise<void>
             message: `La categoría ${categoryId} fue eliminada`
         }).end()
 
-    } catch (error:any) {
+    } catch (error: any) {
         if (error?.code == 'P2025') {
             res.status(400).json({
                 error: 'Categoría no encontrada'

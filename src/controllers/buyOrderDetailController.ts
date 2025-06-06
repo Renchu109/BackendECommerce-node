@@ -1,5 +1,7 @@
 import { Request, Response } from "express";
-import prisma from '../models/buyOrderDetail';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 
 // crear detalle de orden de compra [POST]
@@ -33,11 +35,22 @@ export const createBuyOrderDetail = async (req: Request, res: Response): Promise
             return
         }
 
-        const buyOrderDetail = await prisma.create(
+        const detalleProducto = await prisma.detalleProducto.findUnique({
+            where: { id: detalleProductoId },
+        });
+        
+        if (!detalleProducto || detalleProducto.isActive === false) {
+            res.status(400).json({ 
+                message: 'No se puede asignar un detalle de producto inactivo a un detalle de orden de compra' 
+            });
+            return;
+        }
+
+        const buyOrderDetail = await prisma.ordenCompraDetalle.create(
             {
                 data: {
-                    cantidad, 
-                    subtotal, 
+                    cantidad,
+                    subtotal,
                     ordenCompraId,
                     detalleProductoId
                 }
@@ -57,10 +70,36 @@ export const createBuyOrderDetail = async (req: Request, res: Response): Promise
 // traer todos los detalles de órdenes de compra [GET-ALL]
 export const getAllBuyOrderDetails = async (req: Request, res: Response): Promise<void> => {
     try {
-        const buyOrderDetails = await prisma.findMany({
-            /*where: {
+        const buyOrderDetails = await prisma.ordenCompraDetalle.findMany({
+            where: {
                 isActive: true
-            }*/
+            },
+            include: {
+                detalleProducto: {
+                    include: {
+                        producto: true,
+                        precio: true,
+                        imagenes: true,
+                    },
+                },
+                ordenCompra: {
+                    include: {
+                        direccion: {
+                            include: {
+                                localidad: {
+                                    include: {
+                                        provincia: {
+                                            include: {
+                                                pais: true,
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
         });
         res.status(200).json(buyOrderDetails);
     } catch (error: any) {
@@ -76,11 +115,37 @@ export const getBuyOrderDetailById = async (req: Request, res: Response): Promis
 
     try {
 
-        const buyOrderDetail = await prisma.findUnique({
+        const buyOrderDetail = await prisma.ordenCompraDetalle.findUnique({
             where: {
                 id: buyOrderDetailId,
                 isActive: true
-            }
+            },
+            include: {
+                detalleProducto: {
+                    include: {
+                        producto: true,
+                        precio: true,
+                        imagenes: true,
+                    },
+                },
+                ordenCompra: {
+                    include: {
+                        direccion: {
+                            include: {
+                                localidad: {
+                                    include: {
+                                        provincia: {
+                                            include: {
+                                                pais: true,
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
         })
 
         if (!buyOrderDetail) {
@@ -106,8 +171,8 @@ export const updateBuyOrderDetail = async (req: Request, res: Response): Promise
 
     try {
 
-        const buyOrderDetail = await prisma.findUnique({
-        where: { id: buyOrderDetailId }
+        const buyOrderDetail = await prisma.ordenCompraDetalle.findUnique({
+            where: { id: buyOrderDetailId }
         });
 
         if (!buyOrderDetail || !buyOrderDetail.isActive) {
@@ -132,11 +197,21 @@ export const updateBuyOrderDetail = async (req: Request, res: Response): Promise
         }
 
         if (detalleProductoId) {
+            const detalleProducto = await prisma.detalleProducto.findUnique({
+                where: { id: detalleProductoId },
+            });
+            
+            if (!detalleProducto || detalleProducto.isActive === false) {
+                res.status(400).json({ 
+                    message: 'No se puede asignar un detalle de producto inactivo a un detalle de orden de compra' 
+                });
+                return;
+            }
+
             dataToUpdate.detalleProductoId = detalleProductoId;
         }
 
-
-        const updatedBuyOrderDetail = await prisma.update({
+        const updatedBuyOrderDetail = await prisma.ordenCompraDetalle.update({
             where: {
                 id: buyOrderDetailId
             },
@@ -163,8 +238,8 @@ export const deleteBuyOrderDetail = async (req: Request, res: Response): Promise
     const buyOrderDetailId = parseInt(req.params.id);
 
     try {
-        
-        await prisma.update({
+
+        await prisma.ordenCompraDetalle.update({
             where: {
                 id: buyOrderDetailId
             },
@@ -177,7 +252,7 @@ export const deleteBuyOrderDetail = async (req: Request, res: Response): Promise
             message: `El detalle de orden de compra ${buyOrderDetailId} fue eliminado`
         }).end()
 
-    } catch (error:any) {
+    } catch (error: any) {
         if (error?.code == 'P2025') {
             res.status(400).json({
                 error: 'Detalle de orden de compra no encontrado'

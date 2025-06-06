@@ -1,5 +1,7 @@
 import { Request, Response } from "express";
-import prisma from '../models/price';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 
 // crear precio [POST]
@@ -22,10 +24,10 @@ export const createPrice = async (req: Request, res: Response): Promise<void> =>
             return
         }
 
-        const price = await prisma.create(
+        const price = await prisma.precio.create(
             {
                 data: {
-                    precioCompra, 
+                    precioCompra,
                     precioVenta
                 }
             }
@@ -44,10 +46,23 @@ export const createPrice = async (req: Request, res: Response): Promise<void> =>
 // traer todos los precios [GET-ALL]
 export const getAllPrices = async (req: Request, res: Response): Promise<void> => {
     try {
-        const prices = await prisma.findMany({
-            /*where: {
+        const prices = await prisma.precio.findMany({
+            where: {
                 isActive: true
-            }*/
+            },
+            include: {
+                detalleProductos: {
+                    include: {
+                        producto: true,
+                        imagenes: true,
+                    },
+                },
+                precioDescuentos: {
+                    include: {
+                        descuento: true,
+                    },
+                },
+            },
         });
         res.status(200).json(prices);
     } catch (error: any) {
@@ -63,11 +78,24 @@ export const getPriceById = async (req: Request, res: Response): Promise<void> =
 
     try {
 
-        const price = await prisma.findUnique({
+        const price = await prisma.precio.findUnique({
             where: {
                 id: priceId,
                 isActive: true
-            }
+            },
+            include: {
+                detalleProductos: {
+                    include: {
+                        producto: true,
+                        imagenes: true,
+                    },
+                },
+                precioDescuentos: {
+                    include: {
+                        descuento: true,
+                    },
+                },
+            },
         })
 
         if (!price) {
@@ -93,8 +121,8 @@ export const updatePrice = async (req: Request, res: Response): Promise<void> =>
 
     try {
 
-        const price = await prisma.findUnique({
-        where: { id: priceId }
+        const price = await prisma.precio.findUnique({
+            where: { id: priceId }
         });
 
         if (!price || !price.isActive) {
@@ -114,7 +142,7 @@ export const updatePrice = async (req: Request, res: Response): Promise<void> =>
             dataToUpdate.precioVenta = precioVenta;
         }
 
-        const updatedPrice = await prisma.update({
+        const updatedPrice = await prisma.precio.update({
             where: {
                 id: priceId
             },
@@ -142,8 +170,8 @@ export const deletePrice = async (req: Request, res: Response): Promise<void> =>
     const priceId = parseInt(req.params.id);
 
     try {
-        
-        await prisma.update({
+
+        await prisma.precio.update({
             where: {
                 id: priceId
             },
@@ -156,7 +184,7 @@ export const deletePrice = async (req: Request, res: Response): Promise<void> =>
             message: `El precio ${priceId} fue eliminado`
         }).end()
 
-    } catch (error:any) {
+    } catch (error: any) {
         if (error?.code == 'P2025') {
             res.status(400).json({
                 error: 'Precio no encontrado'

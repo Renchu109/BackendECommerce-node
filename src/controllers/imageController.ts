@@ -1,5 +1,7 @@
 import { Request, Response } from "express";
-import prisma from '../models/image';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 
 // crear imagen de producto [POST]
@@ -20,12 +22,22 @@ export const createImage = async (req: Request, res: Response): Promise<void> =>
             })
             return
         }
-        
 
-        const image = await prisma.create(
+        const detalleProducto = await prisma.detalleProducto.findUnique({
+            where: { id: detalleProductoId },
+        });
+        
+        if (!detalleProducto || detalleProducto.isActive === false) {
+            res.status(400).json({ 
+                message: 'No se puede asignar un detalle de producto inactivo a una imagen' 
+            });
+            return;
+        }
+
+        const image = await prisma.imagen.create(
             {
                 data: {
-                    url, 
+                    url,
                     detalleProductoId
                 }
             }
@@ -44,10 +56,18 @@ export const createImage = async (req: Request, res: Response): Promise<void> =>
 // traer todas las imágenes [GET-ALL]
 export const getAllImages = async (req: Request, res: Response): Promise<void> => {
     try {
-        const images = await prisma.findMany({
-            /*where: {
+        const images = await prisma.imagen.findMany({
+            where: {
                 isActive: true
-            }*/
+            },
+            include: {
+                detalleProducto: {
+                    include: {
+                        producto: true,
+                        precio: true
+                    },
+                },
+            },
         });
         res.status(200).json(images);
     } catch (error: any) {
@@ -63,11 +83,19 @@ export const getImageById = async (req: Request, res: Response): Promise<void> =
 
     try {
 
-        const image = await prisma.findUnique({
+        const image = await prisma.imagen.findUnique({
             where: {
                 id: imageId,
                 isActive: true
-            }
+            },
+            include: {
+                detalleProducto: {
+                    include: {
+                        producto: true,
+                        precio: true
+                    },
+                },
+            },
         })
 
         if (!image) {
@@ -93,8 +121,8 @@ export const updateImage = async (req: Request, res: Response): Promise<void> =>
 
     try {
 
-        const image = await prisma.findUnique({
-        where: { id: imageId }
+        const image = await prisma.imagen.findUnique({
+            where: { id: imageId }
         });
 
         if (!image || !image.isActive) {
@@ -111,10 +139,21 @@ export const updateImage = async (req: Request, res: Response): Promise<void> =>
         }
 
         if (detalleProductoId) {
+            const detalleProducto = await prisma.detalleProducto.findUnique({
+                where: { id: detalleProductoId },
+            });
+            
+            if (!detalleProducto || detalleProducto.isActive === false) {
+                res.status(400).json({ 
+                    message: 'No se puede asignar un detalle de producto inactivo a una imagen' 
+                });
+                return;
+            }
+
             dataToUpdate.detalleProductoId = detalleProductoId;
         }
 
-        const updatedImage = await prisma.update({
+        const updatedImage = await prisma.imagen.update({
             where: {
                 id: imageId
             },
@@ -141,8 +180,8 @@ export const deleteImage = async (req: Request, res: Response): Promise<void> =>
     const imageId = parseInt(req.params.id);
 
     try {
-        
-        await prisma.update({
+
+        await prisma.imagen.update({
             where: {
                 id: imageId
             },
@@ -155,7 +194,7 @@ export const deleteImage = async (req: Request, res: Response): Promise<void> =>
             message: `La imagen ${imageId} fue eliminada`
         }).end()
 
-    } catch (error:any) {
+    } catch (error: any) {
         if (error?.code == 'P2025') {
             res.status(400).json({
                 error: 'Imagen no encontrada'

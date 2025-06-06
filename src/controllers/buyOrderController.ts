@@ -1,5 +1,7 @@
 import { Request, Response } from "express";
-import prisma from '../models/buyOrder';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 
 // crear orden de compra [POST]
@@ -27,11 +29,22 @@ export const createBuyOrder = async (req: Request, res: Response): Promise<void>
             return
         }
 
-        const buyOrder = await prisma.create(
+        const direccion = await prisma.direccion.findUnique({
+            where: { id: direccionId },
+        });
+        
+        if (!direccion || direccion.isActive === false) {
+            res.status(400).json({ 
+                message: 'No se puede asignar una dirección inactiva a una orden de compra' 
+            });
+            return;
+        }
+
+        const buyOrder = await prisma.ordenCompra.create(
             {
                 data: {
-                    total, 
-                    fechaDeCompra, 
+                    total,
+                    fechaDeCompra,
                     direccionId
                 }
             }
@@ -50,10 +63,36 @@ export const createBuyOrder = async (req: Request, res: Response): Promise<void>
 // traer todas las órdenes de compra [GET-ALL]
 export const getAllBuyOrders = async (req: Request, res: Response): Promise<void> => {
     try {
-        const buyOrders = await prisma.findMany({
-            /*where: {
+        const buyOrders = await prisma.ordenCompra.findMany({
+            where: {
                 isActive: true
-            }*/
+            },
+            include: {
+                direccion: {
+                    include: {
+                        localidad: {
+                            include: {
+                                provincia: {
+                                    include: {
+                                        pais: true,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+                detalles: {
+                    include: {
+                        detalleProducto: {
+                            include: {
+                                producto: true,
+                                precio: true,
+                                imagenes: true,
+                            },
+                        },
+                    },
+                },
+            },
         });
         res.status(200).json(buyOrders);
     } catch (error: any) {
@@ -69,10 +108,44 @@ export const getBuyOrderById = async (req: Request, res: Response): Promise<void
 
     try {
 
-        const buyOrder = await prisma.findUnique({
+        const buyOrder = await prisma.ordenCompra.findUnique({
             where: {
                 id: buyOrderId,
                 isActive: true
+            },
+            include: {
+                direccion: {
+                    include: {
+                        localidad: {
+                            include: {
+                                provincia: {
+                                    include: {
+                                        pais: true
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                detalles: {
+                    include: {
+                        detalleProducto: {
+                            include: {
+                                producto: {
+                                    include: {
+                                        productoCategorias: {
+                                            include: {
+                                                categoria: true
+                                            }
+                                        }
+                                    }
+                                },
+                                precio: true,
+                                imagenes: true
+                            }
+                        }
+                    }
+                }
             }
         })
 
@@ -99,8 +172,8 @@ export const updateBuyOrder = async (req: Request, res: Response): Promise<void>
 
     try {
 
-        const buyOrder = await prisma.findUnique({
-        where: { id: buyOrderId }
+        const buyOrder = await prisma.ordenCompra.findUnique({
+            where: { id: buyOrderId }
         });
 
         if (!buyOrder || !buyOrder.isActive) {
@@ -121,11 +194,21 @@ export const updateBuyOrder = async (req: Request, res: Response): Promise<void>
         }
 
         if (direccionId) {
+            const direccion = await prisma.direccion.findUnique({
+                where: { id: direccionId },
+            });
+            
+            if (!direccion || direccion.isActive === false) {
+                res.status(400).json({ 
+                    message: 'No se puede asignar una dirección inactiva a una orden de compra' 
+                });
+                return;
+            }
+
             dataToUpdate.direccionId = direccionId;
         }
 
-
-        const updatedBuyOrder = await prisma.update({
+        const updatedBuyOrder = await prisma.ordenCompra.update({
             where: {
                 id: buyOrderId
             },
@@ -152,8 +235,8 @@ export const deleteBuyOrder = async (req: Request, res: Response): Promise<void>
     const buyOrderId = parseInt(req.params.id);
 
     try {
-        
-        await prisma.update({
+
+        await prisma.ordenCompra.update({
             where: {
                 id: buyOrderId
             },
@@ -166,7 +249,7 @@ export const deleteBuyOrder = async (req: Request, res: Response): Promise<void>
             message: `La orden de compra ${buyOrderId} fue eliminada`
         }).end()
 
-    } catch (error:any) {
+    } catch (error: any) {
         if (error?.code == 'P2025') {
             res.status(400).json({
                 error: 'Orden de compra no encontrada'

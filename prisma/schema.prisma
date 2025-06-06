@@ -17,7 +17,7 @@ model Usuario {
   dni         String      @unique
   rol         Rol
   isActive    Boolean     @default(true)
-  direcciones Direccion[] @relation("UsuarioDirecciones")
+  usuarioDirecciones UsuarioDireccion[] 
 
   @@map("usuarios")
 }
@@ -32,9 +32,19 @@ model Direccion {
   isActive     Boolean       @default(true)
   localidad    Localidad     @relation(fields: [localidadId], references: [id])
   ordenes      OrdenCompra[]
-  usuarios     Usuario[]     @relation("UsuarioDirecciones")
+  usuarioDirecciones UsuarioDireccion[]
 
   @@map("direcciones")
+}
+
+model UsuarioDireccion {
+  usuarioId   Int
+  direccionId Int
+  usuario     Usuario   @relation(fields: [usuarioId], references: [id])
+  direccion   Direccion @relation(fields: [direccionId], references: [id])
+
+  @@id([usuarioId, direccionId])
+  @@map("usuario_direccion")
 }
 
 model Localidad {

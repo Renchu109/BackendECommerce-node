@@ -45,7 +45,15 @@ export const getAllCountries = async (req: Request, res: Response): Promise<void
         const countries = await prisma.findMany({
             where: {
                 isActive: true
-            }
+            },
+            include: {
+                provincias: {
+                    include: {
+                        localidades: {
+                        },
+                    },
+                },
+            },
         });
         res.status(200).json(countries);
     } catch (error: any) {
@@ -63,9 +71,17 @@ export const getCountryById = async (req: Request, res: Response): Promise<void>
 
         const country = await prisma.findUnique({
             where: {
-                id: countryId,
-                isActive: true
-            }
+                id: countryId/*,
+                isActive: true*/
+            },
+            include: {
+                provincias: {
+                    include: {
+                        localidades: {
+                        },
+                    },
+                },
+            },
         })
 
         if (!country) {
@@ -92,7 +108,7 @@ export const updateCountry = async (req: Request, res: Response): Promise<void> 
     try {
 
         const country = await prisma.findUnique({
-        where: { id: countryId }
+            where: { id: countryId }
         });
 
         if (!country || !country.isActive) {
@@ -139,7 +155,7 @@ export const deleteCountry = async (req: Request, res: Response): Promise<void> 
     const countryId = parseInt(req.params.id);
 
     try {
-        
+
         await prisma.update({
             where: {
                 id: countryId
@@ -153,7 +169,7 @@ export const deleteCountry = async (req: Request, res: Response): Promise<void> 
             message: `El pais ${countryId} fue eliminado`
         }).end()
 
-    } catch (error:any) {
+    } catch (error: any) {
         if (error?.code == 'P2025') {
             res.status(400).json({
                 error: 'Pais no encontrado'

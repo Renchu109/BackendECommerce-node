@@ -1,5 +1,7 @@
 import { Request, Response } from "express";
-import prisma from '../models/product';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 
 // crear producto [POST]
@@ -26,13 +28,13 @@ export const createProduct = async (req: Request, res: Response): Promise<void> 
             })
             return
         }
-        
 
-        const product = await prisma.create(
+
+        const product = await prisma.producto.create(
             {
                 data: {
-                    nombre, 
-                    sexo, 
+                    nombre,
+                    sexo,
                     tipoProducto
                 }
             }
@@ -51,10 +53,28 @@ export const createProduct = async (req: Request, res: Response): Promise<void> 
 // traer todos los productos [GET-ALL]
 export const getAllProducts = async (req: Request, res: Response): Promise<void> => {
     try {
-        const products = await prisma.findMany({
-            /*where: {
+        const products = await prisma.producto.findMany({
+            where: {
                 isActive: true
-            }*/
+            },
+            include: {
+                detalleProductos: {
+                    include: {
+                        precio: true,
+                        imagenes: true,
+                        ordenes: {
+                            include: {
+                                ordenCompra: true
+                            }
+                        }
+                    }
+                },
+                productoCategorias: {
+                    include: {
+                        categoria: true
+                    }
+                }
+            }
         });
         res.status(200).json(products);
     } catch (error: any) {
@@ -70,10 +90,28 @@ export const getProductById = async (req: Request, res: Response): Promise<void>
 
     try {
 
-        const product = await prisma.findUnique({
+        const product = await prisma.producto.findUnique({
             where: {
                 id: productId,
                 isActive: true
+            },
+            include: {
+                detalleProductos: {
+                    include: {
+                        precio: true,
+                        imagenes: true,
+                        ordenes: {
+                            include: {
+                                ordenCompra: true
+                            }
+                        }
+                    }
+                },
+                productoCategorias: {
+                    include: {
+                        categoria: true
+                    }
+                }
             }
         })
 
@@ -100,8 +138,8 @@ export const updateProduct = async (req: Request, res: Response): Promise<void> 
 
     try {
 
-        const product = await prisma.findUnique({
-        where: { id: productId }
+        const product = await prisma.producto.findUnique({
+            where: { id: productId }
         });
 
         if (!product || !product.isActive) {
@@ -125,7 +163,7 @@ export const updateProduct = async (req: Request, res: Response): Promise<void> 
             dataToUpdate.tipoProducto = tipoProducto;
         }
 
-        const updatedProduct = await prisma.update({
+        const updatedProduct = await prisma.producto.update({
             where: {
                 id: productId
             },
@@ -152,8 +190,8 @@ export const deleteProduct = async (req: Request, res: Response): Promise<void> 
     const productId = parseInt(req.params.id);
 
     try {
-        
-        await prisma.update({
+
+        await prisma.producto.update({
             where: {
                 id: productId
             },
@@ -166,7 +204,7 @@ export const deleteProduct = async (req: Request, res: Response): Promise<void> 
             message: `El producto ${productId} fue eliminado`
         }).end()
 
-    } catch (error:any) {
+    } catch (error: any) {
         if (error?.code == 'P2025') {
             res.status(400).json({
                 error: 'Producto no encontrado'
